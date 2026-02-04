@@ -21,8 +21,6 @@ export async function loadAllAssets(onProgress?: (progress: number) => void): Pr
   });
 
   // 2. Parse all spritesheets
-  const promises: Promise<void>[] = [];
-
   for (const [key, frames] of Object.entries(SPRITESHEET_CONFIG)) {
     const texture = PIXI.Assets.get(`${key}Texture`);
     if (!texture) {
@@ -31,12 +29,8 @@ export async function loadAllAssets(onProgress?: (progress: number) => void): Pr
     }
 
     const sheet = new PIXI.Spritesheet(texture, frames as PIXI.SpritesheetData);
-    promises.push(
-      sheet.parse().then(() => {
-        PIXI.Cache.set(`${key}Sheet`, sheet);
-      })
-    );
+    sheet.parse().then(() => {
+      PIXI.Cache.set(`${key}Sheet`, sheet);
+    });
   }
-
-  await Promise.all(promises);
 }
