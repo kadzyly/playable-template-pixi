@@ -1,6 +1,8 @@
 import * as PIXI from 'pixi.js';
 import { Text, TextStyle } from 'pixi.js';
 import { DEFAULT_FONT_STACK } from '../core/Fonts';
+import { ButtonUI } from '../ui/atoms/ButtonUI';
+import { SceneType } from '../core/SceneManager';
 
 export class FinalScene extends PIXI.Container {
   private text: PIXI.Text;
@@ -21,6 +23,7 @@ export class FinalScene extends PIXI.Container {
   }
 
   public resize(width: number, height: number): void {
-    this.text.position.set(width / 2, height / 2);
+    this.text.x = width / 2;
+    this.text.y = height / 2;
   }
 }
