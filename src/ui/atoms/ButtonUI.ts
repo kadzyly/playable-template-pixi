@@ -65,6 +65,7 @@ export class ButtonUI extends Container {
   private disabledTextColor!: number;
   private handSprite: Sprite;
   private handAnimationTicker: ((ticker: Ticker) => void) | null = null;
+  private animationTicker: (() => void) | null = null;
 
   constructor(options: ButtonOptions = {}) {
     super();
@@ -309,7 +310,7 @@ export class ButtonUI extends Container {
   }
 
   private setupAnimation() {
-    Ticker.shared.add(() => {
+    this.animationTicker = () => {
       const diff = this.targetScale - this.currentScale;
       this.currentScale += diff * this.animationSpeed;
 
@@ -318,6 +319,20 @@ export class ButtonUI extends Container {
       }
 
       this.scale.set(this.currentScale);
-    });
+    };
+    Ticker.shared.add(this.animationTicker);
+  }
+
+  public destroy() {
+    // clean up animation ticker
+    if (this.animationTicker) {
+      Ticker.shared.remove(this.animationTicker);
+      this.animationTicker = null;
+    }
+
+    // clean up hand animation ticker
+    this.hideHand();
+
+    super.destroy();
   }
 }
