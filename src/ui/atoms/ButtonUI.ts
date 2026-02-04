@@ -1,5 +1,14 @@
 import * as PIXI from 'pixi.js';
-import { Container, FederatedPointerEvent, Graphics, Sprite, Text, TextStyle, Texture, Ticker } from 'pixi.js';
+import {
+  Container,
+  FederatedPointerEvent,
+  Graphics,
+  Sprite,
+  Text,
+  TextStyle,
+  Texture,
+  Ticker
+} from 'pixi.js';
 import { SoundManager } from '../../core/SoundManager';
 import { FontFamily, DEFAULT_FONT_STACK } from '../../core/Fonts';
 
@@ -172,7 +181,13 @@ export class ButtonUI extends Container {
 
     if (glowSize > 0 && glowAlpha > 0) {
       const glowPadding = glowSize;
-      g.roundRect(-glowPadding, -glowPadding, width + glowPadding * 2, height + glowPadding * 2, radius + glowPadding);
+      g.roundRect(
+        -glowPadding,
+        -glowPadding,
+        width + glowPadding * 2,
+        height + glowPadding * 2,
+        radius + glowPadding
+      );
       g.fill({
         color: glowColor,
         alpha: glowAlpha
