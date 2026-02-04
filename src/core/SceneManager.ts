@@ -11,6 +11,13 @@ export interface IScene extends PIXI.Container {
   resize(width: number, height: number): void;
 }
 
+/**
+ * How to use:
+ * this.button.on('click', () => {
+ *   this.emit('switchScene', SceneType.FINAL);
+ * });
+ */
+
 export class SceneManager extends PIXI.Container {
   private currentScene: IScene | null = null;
   private scenes: Map<SceneType, IScene> = new Map();
@@ -18,18 +25,31 @@ export class SceneManager extends PIXI.Container {
 
   constructor() {
     super();
-    this.initializeScenes();
   }
 
-  private initializeScenes(): void {
-    this.scenes.set(SceneType.MAIN, new MainScene());
-    this.scenes.set(SceneType.FINAL, new FinalScene(0, 0));
-    
-    // Listen to scene events
-    const mainScene = this.scenes.get(SceneType.MAIN);
-    if (mainScene) {
-      mainScene.on('switchScene', this.handleSceneSwitchRequest.bind(this));
+  private createScene(sceneType: SceneType): IScene {
+    switch (sceneType) {
+      case SceneType.MAIN:
+        return new MainScene();
+      case SceneType.FINAL:
+        return new FinalScene(0, 0);
+      default:
+        throw new Error(`Unknown scene type: ${sceneType}`);
     }
+  }
+
+  private ensureScene(sceneType: SceneType): IScene {
+    let scene = this.scenes.get(sceneType);
+
+    // check if scene exists and is not destroyed
+    if (!scene || scene.destroyed) {
+      scene = this.createScene(sceneType);
+      this.scenes.set(sceneType, scene);
+
+      // listen to scene events
+      scene.on('switchScene', this.handleSceneSwitchRequest.bind(this));
+    }
+    return scene;
   }
 
   private handleSceneSwitchRequest(sceneType: SceneType): void {
@@ -41,18 +61,18 @@ export class SceneManager extends PIXI.Container {
       return;
     }
 
-    const newScene = this.scenes.get(sceneType);
-    if (!newScene) {
-      throw new Error(`Scene ${sceneType} not found`);
-    }
+    // create or get the scene (lazy loading)
+    const newScene = this.ensureScene(sceneType);
 
-    // Hide current scene with fade out
+    // hide and destroy current scene with fade out
     if (this.currentScene) {
       await this.fadeOutScene(this.currentScene);
       this.removeChild(this.currentScene);
+
+      this.currentScene.destroy({ children: true });
     }
 
-    // Add and show new scene with fade in
+    // add and show new scene with fade in
     this.addChild(newScene);
     await this.fadeInScene(newScene);
 
@@ -69,8 +89,7 @@ export class SceneManager extends PIXI.Container {
   }
 
   public resize(width: number, height: number): void {
-    // Resize all scenes to keep them ready
-    this.scenes.forEach(scene => {
+    this.scenes.forEach((scene) => {
       scene.resize(width, height);
     });
   }
@@ -78,10 +97,10 @@ export class SceneManager extends PIXI.Container {
   private async fadeOutScene(scene: IScene): Promise<void> {
     return new Promise((resolve) => {
       scene.alpha = 1;
-      
+
       const fadeOut = () => {
         scene.alpha -= 0.05;
-        
+
         if (scene.alpha <= 0) {
           scene.alpha = 0;
           resolve();
@@ -89,7 +108,7 @@ export class SceneManager extends PIXI.Container {
           requestAnimationFrame(fadeOut);
         }
       };
-      
+
       fadeOut();
     });
   }
@@ -97,10 +116,10 @@ export class SceneManager extends PIXI.Container {
   private async fadeInScene(scene: IScene): Promise<void> {
     return new Promise((resolve) => {
       scene.alpha = 0;
-      
+
       const fadeIn = () => {
         scene.alpha += 0.05;
-        
+
         if (scene.alpha >= 1) {
           scene.alpha = 1;
           resolve();
@@ -108,13 +127,13 @@ export class SceneManager extends PIXI.Container {
           requestAnimationFrame(fadeIn);
         }
       };
-      
+
       fadeIn();
     });
   }
 
   public destroy(): void {
-    this.scenes.forEach(scene => {
+    this.scenes.forEach((scene) => {
       scene.destroy({ children: true });
     });
     this.scenes.clear();
