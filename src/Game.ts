@@ -40,7 +40,6 @@ export class Game {
     const screenAdapter = ScreenAdapter.getInstance();
     screenAdapter.updateDimensions(width, height);
 
-    // await loadAssets();
     await loadAllAssets();
     await loadFonts();
 
