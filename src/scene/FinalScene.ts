@@ -17,8 +17,6 @@ export class FinalScene extends PIXI.Container {
       })
     });
 
-    this.text.anchor.set(0.5);
-    this.text.position.set(width / 2, height / 2);
     this.addChild(this.text);
   }
 
