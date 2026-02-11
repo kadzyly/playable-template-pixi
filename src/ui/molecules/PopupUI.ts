@@ -1,120 +1,147 @@
-import { Container, Ticker } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
+import { gsap } from 'gsap';
 import { ScreenAdapter } from '../../core/ScreenAdapter';
 
 export abstract class PopupUI extends Container {
   protected panel: Container;
+  private background: Container;
 
-  private ticker?: Ticker;
-  private animTime = 0;
-  private animDuration = 0.5;
-  private animFrom = 0;
-  private animTo = 0;
-  private onComplete?: () => void;
   private baseScale = 1;
-  private screenAdapter: ScreenAdapter;
+  screenAdapter: ScreenAdapter;
 
   constructor() {
     super();
 
     this.screenAdapter = ScreenAdapter.getInstance();
 
+    this.background = new Container();
+    this.background.alpha = 0;
+
+    const bgGraphics = new Graphics();
+    bgGraphics.beginFill(0x000000);
+    bgGraphics.drawRect(0, 0, 1, 1);
+    bgGraphics.endFill();
+    this.background.addChild(bgGraphics);
+
     this.panel = new Container();
     this.panel.alpha = 0;
-    this.panel.scale.set(0);
 
-    this.addChild(this.panel);
+    this.addChild(this.background, this.panel);
   }
 
   public resize(width: number, height: number) {
-    this.panel.x = width * 0.5;
-    this.panel.y = height * 0.5;
+    this.position.set(width * 0.5, height * 0.5);
+
+    const bgGraphics = this.background.children[0] as Graphics;
+    bgGraphics.clear();
+    bgGraphics.beginFill(0x000000);
+    bgGraphics.drawRect(-width * 0.5, -height * 0.5, width, height);
+    bgGraphics.endFill();
+
+    this.panel.x = 0;
+    this.panel.y = 0;
 
     const contentWidth = 300;
     const contentHeight = 300;
+
     if (this.screenAdapter.isLandscape()) {
-      // looks like ~0.9, because has gradient effect
-      const maxH = height * 1.2;
+      const maxH = height * 0.9;
       this.baseScale = contentHeight > maxH ? maxH / contentHeight : 1;
     } else {
-      // looks like ~0.9, because has gradient effect
-      const maxW = width * 1.2;
+      const maxW = width * 0.9;
       this.baseScale = contentWidth > maxW ? maxW / contentWidth : 1;
     }
 
-    if (!this.ticker && this.animTo === 1) {
+    if (this.panel.alpha > 0) {
       this.panel.scale.set(this.baseScale);
     }
   }
 
   show() {
-    this.startAnim(0, 1);
+    gsap.killTweensOf(this.panel.scale);
+    gsap.killTweensOf(this.panel);
+    gsap.killTweensOf(this.background);
+
+    this.panel.alpha = 0;
+    this.panel.scale.set(0);
+    this.background.alpha = 0;
+
+    const tl = gsap.timeline();
+
+    // background: opacity 0 -> 1
+    tl.to(this.background, {
+      alpha: 0.7,
+      duration: 0.3,
+      ease: 'power1.out'
+    });
+
+    tl.to(
+      this.panel,
+      {
+        alpha: 1,
+        duration: 0.3,
+        ease: 'power1.out'
+      },
+      0
+    );
+
+    tl.to(
+      this.panel.scale,
+      {
+        x: this.baseScale * 1.2,
+        y: this.baseScale * 1.2,
+        duration: 0.35,
+        ease: 'back.out(1.7)'
+      },
+      0
+    );
+
+    tl.to(
+      this.panel.scale,
+      {
+        x: this.baseScale,
+        y: this.baseScale,
+        duration: 0.15,
+        ease: 'power2.out'
+      },
+      '-=0.1'
+    );
   }
 
   hide(onHidden?: () => void) {
-    this.startAnim(1, 0, onHidden);
+    gsap.killTweensOf(this.panel.scale);
+    gsap.killTweensOf(this.panel);
+    gsap.killTweensOf(this.background);
+
+    const tl = gsap.timeline();
+
+    // background: opacity 0.7 -> 0
+    tl.to(this.background, {
+      alpha: 0,
+      duration: 0.2,
+      ease: 'power1.in'
+    });
+
+    tl.to(
+      this.panel,
+      {
+        alpha: 0,
+        duration: 0.2,
+        ease: 'power1.in'
+      },
+      0
+    );
+
+    tl.to(
+      this.panel.scale,
+      {
+        x: 0,
+        y: 0,
+        duration: 0.2,
+        ease: 'back.in(1.7)',
+        onComplete: onHidden
+      },
+      0
+    );
   }
-
-  private startAnim(from: number, to: number, cb?: () => void) {
-    this.animFrom = from;
-    this.animTo = to;
-    this.animTime = 0;
-    this.onComplete = cb;
-
-    if (from === 0 && to === 1) {
-      this.animDuration = 0.5;
-    } else {
-      this.animDuration = 0.2;
-    }
-
-    this.panel.alpha = from;
-
-    if (from === 0 && to === 1) {
-      this.panel.scale.set(0);
-    } else if (from === 1 && to === 0) {
-      this.panel.scale.set(this.baseScale);
-    }
-
-    this.ticker?.destroy();
-    this.ticker = new Ticker();
-    this.ticker.add(this.updateAnim);
-    this.ticker.start();
-  }
-
-  private updateAnim = (ticker: Ticker) => {
-    const dt = ticker.deltaTime;
-
-    this.animTime += dt / 60;
-
-    const t = Math.min(this.animTime / this.animDuration, 1);
-
-    // calculate scale animation
-    let scale = 1;
-    if (this.animFrom === 0 && this.animTo === 1) {
-      // show animation: 0 -> 1.2 (fast) -> 1.0 (slow)
-      const phase1 = 0.7; // 70% of duration
-
-      if (t < phase1) {
-        const pt = t / phase1;
-        scale = (1 - (1 - pt) * (1 - pt)) * 1.2;
-      } else {
-        const pt = (t - phase1) / (1 - phase1);
-        // from 1.2 -> 1.0
-        scale = 1.2 - pt * 0.2;
-      }
-    } else if (this.animFrom === 1 && this.animTo === 0) {
-      // from 1.0 -> 0
-      scale = 1 - t;
-    }
-
-    const v = this.animFrom + (this.animTo - this.animFrom) * t;
-
-    this.panel.alpha = v;
-    this.panel.scale.set(scale * this.baseScale);
-
-    if (t >= 1) {
-      ticker.destroy();
-      this.ticker = undefined;
-      this.onComplete?.();
-    }
-  };
 }
