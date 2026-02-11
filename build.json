@@ -1,7 +1,10 @@
 {
+  "filename": "{app}_{name}_{language}_{network}",
   "app": "Playable",
-  "name": "Template",
+  "name": "Name",
   "version": "v1",
+  "language": "en",
+  "network": "preview",
   "google_play_url": "https://play.google.com/store/games",
   "app_store_url": "https://www.apple.com/app-store/"
 }
